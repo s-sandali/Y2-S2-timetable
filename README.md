@@ -60,10 +60,6 @@ Font: [Inter](https://fonts.google.com/specimen/Inter)
 
 ---
 
-## 📄 License
 
-MIT (see [LICENSE](LICENSE) if included)
-
----
 
 *Feel free to fork, customize, and use for your own semester schedules!*
