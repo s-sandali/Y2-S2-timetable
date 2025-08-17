@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>University Timetable — Downloadable PNG</title>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; padding: 20px; color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header { background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%); color: white; padding: 30px; text-align: center; }
+        .header h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .header p { font-size: 1.1rem; opacity: 0.9; font-weight: 300; }
+
+        .content { padding: 40px; }
+
+        .day-section { margin-bottom: 40px; background: #f8fafc; border-radius: 15px; overflow: hidden; border: 1px solid #e2e8f0; }
+        .day-header { background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); color: white; padding: 20px 30px; font-size: 1.4rem; font-weight: 600; }
+        .classes-grid { padding: 20px; }
+
+        .class-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-left: 5px solid; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .class-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+        .class-card:last-child { margin-bottom: 0; }
+
+        .ds { border-left-color: #f56565; }
+        .se { border-left-color: #48bb78; }
+        .pp { border-left-color: #ed8936; }
+        .hci { border-left-color: #9f7aea; }
+        .os { border-left-color: #38b2ac; }
+
+        .class-time { font-size: 1.1rem; font-weight: 600; color: #2d3748; margin-bottom: 8px; }
+        .class-details { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+        .class-info h3 { font-size:1.2rem; font-weight:600; color:#2d3748; margin-bottom:4px; }
+        .class-type { font-size:0.9rem; color:#718096; font-weight:400; }
+        .class-venue { background:#edf2f7; color:#4a5568; padding:8px 12px; border-radius:8px; font-size:0.9rem; font-weight:500; }
+
+        .summary { background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); border-radius:15px; padding:30px; margin-top:40px; }
+        .summary h2 { color: #2d3748; font-size:1.5rem; margin-bottom:20px; text-align:center; }
+        .summary-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px,1fr)); gap:20px; }
+        .summary-card { background:white; padding:20px; border-radius:12px; text-align:center; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        .modules-legend { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:15px; margin-top:30px; }
+        .module-item { display:flex; align-items:center; background:white; padding:15px; border-radius:10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .module-color { width:4px; height:40px; border-radius:2px; margin-right:15px; }
+        .module-info h4 { font-size:0.9rem; color:#2d3748; font-weight:600; margin-bottom:4px; }
+        .module-info p { font-size:0.8rem; color:#718096; }
+
+        .download-btn { position: fixed; bottom: 30px; right: 30px; background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); color: white; border: none; padding: 15px 20px; border-radius: 50px; font-size: 1rem; font-weight: 600; cursor: pointer; box-shadow: 0 8px 25px rgba(66, 153, 225, 0.3); transition: all 0.2s ease; z-index: 1000; }
+        .download-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 35px rgba(66, 153, 225, 0.4); }
+
+        /* Loading overlay used while capturing */
+        .capture-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            border-radius: 20px;
+        }
+        .capture-overlay.show { display:flex; }
+        .spinner {
+            width: 72px; height: 72px; border-radius: 50%;
+            border: 8px solid rgba(0,0,0,0.08); border-top-color: #3182ce;
+            animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .content { padding: 20px; }
+            .class-details { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="timetable-root">
+        <div class="capture-overlay" id="captureOverlay" aria-hidden="true">
+            <div style="text-align:center;">
+                <div class="spinner" role="progressbar" aria-label="Capturing timetable"></div>
+                <div style="margin-top:12px; font-weight:600; color:#2d3748;">Preparing image…</div>
+            </div>
+        </div>
+
+        <div class="header">
+            <h1>🎓 University Timetable</h1>
+            <p>Semester Schedule Overview</p>
+        </div>
+
+        <div class="content">
+            <!-- Monday -->
+            <div class="day-section">
+                <div class="day-header">Monday</div>
+                <div class="classes-grid">
+                    <div class="class-card ds">
+                        <div class="class-time">8:30 AM - 10:30 AM</div>
+                        <div class="class-details">
+                            <div class="class-info">
+                                <h3>Distributed Systems</h3>
+                                <div class="class-type">Lecture</div>
+                            </div>
+                            <div class="class-venue">F1308</div>
+                        </div>
+                    </div>
+
+                    <div class="class-card se">
+                        <div class="class-time">10:30 AM - 12:30 PM</div>
+                        <div class="class-details">
+                            <div class="class-info">
+                                <h3>Software Engineering</h3>
+                                <div class="class-type">Labs</div>
+                            </div>
+                            <div class="class-venue">G1302</div>
+                        </div>
+                    </div>
+
+                    <div class="class-card os">
+                        <div class="class-time">3:30 PM - 5:30 PM</div>
+                        <div class="class-details">
+                            <div class="class-info">
+                                <h3>Operating Systems</h3>
+                                <div class="class-type">Labs</div>
+                            </div>
+                            <div class="class-venue">F1301</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tuesday -->
+            <div class="day-section">
+                <div class="day-header">Tuesday</div>
+                <div class="classes-grid">
+                    <div class="class-card ds">
+                        <div class="class-time">2:30 PM - 4:30 PM</div>
+                        <div class="class-details">
+                            <div class="class-info">
+                                <h3>Distributed Systems</h3>
+                                <div class="class-type">Labs</div>
+                            </div>
+                            <div class="class-venue">G1103</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wednesday -->
+            <div class="day-section">
+                <div class="day-header">Wednesday</div>
+                <div class="classes-grid">
+                    <div class="class-card pp">
+                        <div class="class-time">8:30 AM - 11:30 AM</div>
+                        <div class="class-details">
+                            <div class="class-info">
+                                <h3>Programming Paradigms</h3>
+                                <div class="class-type">Lecture</div>
+                            </div>
+                            <div class="class-venue">G1103</div>
+                        </div>
+                    </div>
+
+                    <div class="class-card pp">
+                        <div class="class-time">1:30 PM - 3:30 PM</div>
+                        <div class="class-details">
+                            <div class="class-info">
+                                <h3>Programming Paradigms</h3>
+                                <div class="class-type">Labs</div>
+                            </div>
+                            <div class="class-venue">G1303</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thursday -->
+            <div class="day-section">
+                <div class="day-header">Thursday</div>
+                <div class="classes-grid">
+                    <div class="class-card hci">
+                        <div class="class-time">8:30 AM - 10:30 AM</div>
+                        <div class="class-details">
+                            <div class="class-info">
+                                <h3>Human-Computer Interaction</h3>
+                                <div class="class-type">Lecture</div>
+                            </div>
+                            <div class="class-venue">G1106</div>
+                        </div>
+                    </div>
+
+                    <div class="class-card se">
+                        <div class="class-time">10:30 AM - 12:30 PM</div>
+                        <div class="class-details">
+                            <div class="class-info">
+                                <h3>Software Engineering</h3>
+                                <div class="class-type">Lecture</div>
+                            </div>
+                            <div class="class-venue">G601</div>
+                        </div>
+                    </div>
+
+                    <div class="class-card hci">
+                        <div class="class-time">1:30 PM - 3:30 PM</div>
+                        <div class="class-details">
+                            <div class="class-info">
+                                <h3>Human-Computer Interaction</h3>
+                                <div class="class-type">Labs</div>
+                            </div>
+                            <div class="class-venue">G1102</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Friday -->
+            <div class="day-section">
+                <div class="day-header">Friday</div>
+                <div class="classes-grid">
+                    <div class="class-card os">
+                        <div class="class-time">10:30 AM - 12:30 PM</div>
+                        <div class="class-details">
+                            <div class="class-info">
+                                <h3>Operating Systems</h3>
+                                <div class="class-type">Lecture</div>
+                            </div>
+                            <div class="class-venue">F502</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary + legend -->
+            <div class="summary">
+                <h2>📊 Weekly Summary</h2>
+                <div class="summary-grid">
+                    <div class="summary-card"><h3>Total Hours</h3><p>18 hours/week</p></div>
+                    <div class="summary-card"><h3>Busiest Day</h3><p>Mon & Thu (6h)</p></div>
+                    <div class="summary-card"><h3>Total Modules</h3><p>5 modules</p></div>
+                    <div class="summary-card"><h3>Lightest Day</h3><p>Tue & Fri (2h)</p></div>
+                </div>
+
+                <div class="modules-legend">
+                    <div class="module-item"><div class="module-color" style="background-color:#f56565;"></div><div class="module-info"><h4>DS</h4><p>Distributed Systems</p></div></div>
+                    <div class="module-item"><div class="module-color" style="background-color:#48bb78;"></div><div class="module-info"><h4>SE</h4><p>Software Engineering</p></div></div>
+                    <div class="module-item"><div class="module-color" style="background-color:#ed8936;"></div><div class="module-info"><h4>PP</h4><p>Programming Paradigms</p></div></div>
+                    <div class="module-item"><div class="module-color" style="background-color:#9f7aea;"></div><div class="module-info"><h4>HCI</h4><p>Human-Computer Interaction</p></div></div>
+                    <div class="module-item"><div class="module-color" style="background-color:#38b2ac;"></div><div class="module-info"><h4>OS</h4><p>Operating Systems</p></div></div>
+                </div>
+
+                <div style="margin-top:20px; text-align:center;">
+                    <div class="download-buttons" style="display:inline-flex; gap:12px; flex-wrap:wrap;">
+                        <button onclick="window.print()" style="padding:10px 16px; border-radius:8px; font-weight:600; border:none; cursor:pointer;">🖨️ Print / Save as PDF</button>
+                        <button id="saveImageBtn" onclick="downloadAsImage()" style="padding:10px 16px; border-radius:8px; font-weight:600; border:none; cursor:pointer;">📱 Save as Image</button>
+                        <button onclick="copyToClipboard()" style="padding:10px 16px; border-radius:8px; font-weight:600; border:none; cursor:pointer;">📋 Copy Schedule</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="download-btn" id="floatingDownload" onclick="downloadAsImage()">📥 Download PNG</button>
+
+    <!-- html2canvas CDN (used to capture the timetable) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNa5Y2mZqH6H5Yb6wqQ5C0Q8pCzq0pCqLJE3V5g0J4qY7q4u2y7oKXv5Mu+msu8rWQv4Dgq2+N7Z0mM0k2bL0A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script>
+        // Hover animation
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.class-card');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-3px) scale(1.02)';
+                });
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+        });
+
+        // Helper: show/hide overlay and disable buttons
+        function setCapturing(isCapturing) {
+            const overlay = document.getElementById('captureOverlay');
+            const saveBtn = document.getElementById('saveImageBtn');
+            const floatBtn = document.getElementById('floatingDownload');
+            if (isCapturing) {
+                overlay.classList.add('show');
+                if (saveBtn) saveBtn.disabled = true;
+                if (floatBtn) floatBtn.disabled = true;
+            } else {
+                overlay.classList.remove('show');
+                if (saveBtn) saveBtn.disabled = false;
+                if (floatBtn) floatBtn.disabled = false;
+            }
+        }
+
+        async function downloadAsImage() {
+            const container = document.getElementById('timetable-root');
+            if (!container) return alert('Timetable container not found.');
+
+            setCapturing(true);
+
+            try {
+                // Use scale to get a higher-resolution image (2 = 2x device pixels)
+                const canvas = await html2canvas(container, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    allowTaint: true,
+                    backgroundColor: null // keep transparent background if you want; set to '#ffffff' to force white
+                });
+
+                // Convert canvas to blob and download
+                canvas.toBlob(function(blob) {
+                    if (!blob) {
+                        setCapturing(false);
+                        return alert('Failed to create image blob.');
+                    }
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'university-timetable.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    // free memory
+                    URL.revokeObjectURL(url);
+                    setCapturing(false);
+                }, 'image/png', 0.92);
+            } catch (err) {
+                setCapturing(false);
+                console.error('html2canvas error:', err);
+                alert('There was an error creating the image. Try printing to PDF as an alternative.');
+            }
+        }
+
+        // Build and copy a plain-text schedule
+        function copyToClipboard() {
+            const daySections = document.querySelectorAll('.day-section');
+            const lines = [];
+            daySections.forEach(section => {
+                const dayNameEl = section.querySelector('.day-header');
+                const dayName = dayNameEl ? dayNameEl.textContent.trim() : 'Day';
+                lines.push(dayName + ':');
+
+                const cards = section.querySelectorAll('.class-card');
+                if (!cards || cards.length === 0) {
+                    lines.push('  (No classes)');
+                } else {
+                    cards.forEach(card => {
+                        const time = card.querySelector('.class-time')?.textContent.trim() || '';
+                        const title = card.querySelector('.class-info h3')?.textContent.trim() || '';
+                        const type = card.querySelector('.class-type')?.textContent.trim() || '';
+                        const venue = card.querySelector('.class-venue')?.textContent.trim() || '';
+                        lines.push(`  ${time} — ${title} (${type}) — ${venue}`);
+                    });
+                }
+                lines.push('');
+            });
+
+            const scheduleText = lines.join('\n');
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(scheduleText).then(() => {
+                    alert('✅ Timetable copied to clipboard! You can paste it anywhere.');
+                }).catch(() => {
+                    fallbackCopy(scheduleText);
+                });
+            } else {
+                fallbackCopy(scheduleText);
+            }
+
+            function fallbackCopy(text) {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                try {
+                    document.execCommand('copy');
+                    alert('✅ Timetable copied to clipboard! You can paste it anywhere.');
+                } catch (e) {
+                    alert('Could not copy automatically. Please select and copy manually:\n\n' + text);
+                }
+                document.body.removeChild(ta);
+            }
+        }
+    </script>
+</body>
+</html>
